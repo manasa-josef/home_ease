@@ -192,14 +192,6 @@ class _SchedulePageState extends State<SchedulePage> {
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            if (isOverdue)
-                              Text(
-                                '${_getDaysOverdue(task.date.toDate())} Overdue',
-                                style: const TextStyle(
-                                  color: Colors.red,
-                                  fontSize: 12,
-                                ),
-                              ),
                             if (task.notes.isNotEmpty)
                               Text(
                                 task.notes,
@@ -225,10 +217,15 @@ class _SchedulePageState extends State<SchedulePage> {
                             ),
                           ],
                         ),
-                        trailing: Text(
-                          DateFormat('hh:mm a').format(task.date.toDate()),
-                          style: const TextStyle(color: Colors.orange),
-                        ),
+                        trailing: isOverdue
+                          ? Text(
+                              '${_getDaysOverdue(task.date.toDate())} Overdue',
+                              style: const TextStyle(color: Colors.red),
+                            )
+                          : Text(
+                              DateFormat('hh:mm a').format(task.date.toDate()),
+                              style: const TextStyle(color: Colors.orange),
+                            ),
                       ),
                     );
                   },

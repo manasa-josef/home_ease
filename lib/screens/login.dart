@@ -110,6 +110,14 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       });
     }
   }
+  Future<void> updateLastActive() async {
+  User? user = FirebaseAuth.instance.currentUser;
+  if (user != null) {
+    await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+      'lastActiveDate': FieldValue.serverTimestamp(),
+    });
+  }
+}
 
  Future<void> _loginAdmin() async {
   if (_adminUsernameController.text.isEmpty || _adminPasswordController.text.isEmpty) {

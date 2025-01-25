@@ -52,75 +52,74 @@ class _TaskListPageState extends State<TaskListPage> {
   }
 
   Future<void> _markTaskAsDone(Map<String, dynamic> task, String taskId) async {
-  try {
-    final nextOccurrence = _calculateActualNextOccurrence(task);
-    
-    await FirebaseFirestore.instance
-        .collection('tasks')
-        .doc(taskId)
-        .update({
-      'completedInstances': FieldValue.arrayUnion([_getCurrentDateKey()]),
-      'lastCompletedAt': FieldValue.serverTimestamp(),
-      'nextOccurrence': nextOccurrence,
-    });
+    try {
+      final nextOccurrence = _calculateActualNextOccurrence(task);
+      
+      await FirebaseFirestore.instance
+          .collection('tasks')
+          .doc(taskId)
+          .update({
+        'completedInstances': FieldValue.arrayUnion([_getCurrentDateKey()]),
+        'lastCompletedAt': FieldValue.serverTimestamp(),
+        'nextOccurrence': nextOccurrence,
+      });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Task completed. Next occurrence on ${DateFormat('yyyy-MM-dd').format(nextOccurrence)}',
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Task completed. Next occurrence on ${DateFormat('yyyy-MM-dd').format(nextOccurrence)}',
+          ),
         ),
-      ),
-    );
-  } catch (e) {
-    print('Error marking task as done: $e');
+      );
+    } catch (e) {
+      print('Error marking task as done: $e');
+    }
   }
-}
 
   Future<void> _skipTask(Map<String, dynamic> task, String taskId) async {
-  try {
-    final nextOccurrence = _calculateActualNextOccurrence(task);
-    
-    await FirebaseFirestore.instance
-        .collection('tasks')
-        .doc(taskId)
-        .update({
-      'skippedInstances': FieldValue.arrayUnion([_getCurrentDateKey()]),
-      'nextOccurrence': nextOccurrence,
-    });
+    try {
+      final nextOccurrence = _calculateActualNextOccurrence(task);
+      
+      await FirebaseFirestore.instance
+          .collection('tasks')
+          .doc(taskId)
+          .update({
+        'skippedInstances': FieldValue.arrayUnion([_getCurrentDateKey()]),
+        'nextOccurrence': nextOccurrence,
+      });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Task skipped. Next occurrence on ${DateFormat('yyyy-MM-dd').format(nextOccurrence)}',
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Task skipped. Next occurrence on ${DateFormat('yyyy-MM-dd').format(nextOccurrence)}',
+          ),
         ),
-      ),
-    );
-  } catch (e) {
-    print('Error skipping task: $e');
-  }
-}
-
-DateTime _calculateActualNextOccurrence(Map<String, dynamic> task) {
-  final currentDate = DateTime.now();
-  final taskDate = (task['date'] as Timestamp).toDate();
-  final repeat = task['repeat'];
-
-  switch (repeat) {
-    case 'Every day':
-      return currentDate.add(const Duration(days: 1));
-    case 'Every week':
-      return currentDate.add(const Duration(days: 7));
-    case 'Every month':
-      // Ensure the day matches the original task date's day
-      return DateTime(
-        currentDate.year, 
-        currentDate.month + 1, 
-        taskDate.day
       );
-    default:
-      return taskDate;
+    } catch (e) {
+      print('Error skipping task: $e');
+    }
   }
-}
+
+  DateTime _calculateActualNextOccurrence(Map<String, dynamic> task) {
+    final currentDate = DateTime.now();
+    final taskDate = (task['date'] as Timestamp).toDate();
+    final repeat = task['repeat'];
+
+    switch (repeat) {
+      case 'Every day':
+        return currentDate.add(const Duration(days: 1));
+      case 'Every week':
+        return currentDate.add(const Duration(days: 7));
+      case 'Every month':
+        return DateTime(
+          currentDate.year, 
+          currentDate.month + 1, 
+          taskDate.day
+        );
+      default:
+        return taskDate;
+    }
+  }
 
   String _getCurrentDateKey() {
     final now = DateTime.now();
@@ -149,13 +148,11 @@ DateTime _calculateActualNextOccurrence(Map<String, dynamic> task) {
     final skippedInstances = List<String>.from(task['skippedInstances'] ?? []);
     final currentDateKey = _getCurrentDateKey();
 
-    // If task is completed or skipped for today, don't show
     if (completedInstances.contains(currentDateKey) || 
         skippedInstances.contains(currentDateKey)) {
       return false;
     }
 
-    // For recurring tasks, check if current date matches the next occurrence
     final repeat = task['repeat'];
     if (repeat != null && repeat != 'Never') {
       final nextOccurrence = task['nextOccurrence'] != null 
@@ -169,6 +166,31 @@ DateTime _calculateActualNextOccurrence(Map<String, dynamic> task) {
     }
 
     return true;
+  }
+
+  Widget _buildTaskStatus(Map<String, dynamic> task) {
+    final taskDate = (task['date'] as Timestamp).toDate();
+    final now = DateTime.now();
+
+    if (now.isAfter(taskDate)) {
+      final duration = now.difference(taskDate);
+      String overdueText;
+      
+      if (duration.inDays > 0) {
+        overdueText = 'Overdue by ${duration.inDays} day${duration.inDays > 1 ? 's' : ''}';
+      } else if (duration.inHours > 0) {
+        overdueText = 'Overdue by ${duration.inHours} hour${duration.inHours > 1 ? 's' : ''}';
+      } else {
+        overdueText = 'Overdue by ${duration.inMinutes} minute${duration.inMinutes > 1 ? 's' : ''}';
+      }
+
+      return Text(
+        overdueText,
+        style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+      );
+    }
+
+    return const SizedBox.shrink();
   }
 
   @override
@@ -209,6 +231,8 @@ DateTime _calculateActualNextOccurrence(Map<String, dynamic> task) {
               final taskDoc = visibleTasks[index];
               final task = taskDoc.data() as Map<String, dynamic>;
               final taskId = taskDoc.id;
+              final taskDate = (task['date'] as Timestamp).toDate();
+              final now = DateTime.now();
 
               return Card(
                 margin: const EdgeInsets.only(bottom: 12),
@@ -221,15 +245,12 @@ DateTime _calculateActualNextOccurrence(Map<String, dynamic> task) {
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (task['date'] != null) Text(
-                        DateFormat('yyyy-MM-dd').format((task['date'] as Timestamp).toDate()),
-                        style: const TextStyle(color: Colors.grey),
-                      ),
-                      if (task['repeat'] != null && task['repeat'] != 'Never')
-                        Text(
-                          'Repeats: ${task['repeat']}',
-                          style: const TextStyle(color: Colors.blue),
-                        ),
+                      now.isAfter(taskDate) 
+                        ? _buildTaskStatus(task)
+                        : Text(
+                            DateFormat('yyyy-MM-dd HH:mm').format(taskDate),
+                            style: const TextStyle(color: Colors.grey),
+                          ),
                     ],
                   ),
                 ),

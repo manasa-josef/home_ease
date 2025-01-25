@@ -26,9 +26,17 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _initializeDefaultRooms();
-    _loadUserData(); // Add this to load user data
+    _loadUserData();
+    updateLastActive(); // Add this to load user data
   }
-
+  Future<void> updateLastActive() async {
+  User? user = FirebaseAuth.instance.currentUser;
+  if (user != null) {
+    await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+      'lastActiveDate': FieldValue.serverTimestamp(),
+    });
+  }
+}
   // Add this method to load user data
   Future<void> _loadUserData() async {
     try {

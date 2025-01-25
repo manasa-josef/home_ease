@@ -121,6 +121,7 @@ Future<void> _registerUser() async {
         'fullName': _fullNameController.text.trim(),
         'email': _emailController.text.trim(),
         'createdAt': Timestamp.now(),
+        'lastActiveDate': Timestamp.now(),
       });
 
       if (mounted) {

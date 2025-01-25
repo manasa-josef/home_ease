@@ -17,6 +17,13 @@ class TaskManagementPage extends StatefulWidget {
 
 class _TaskManagementPageState extends State<TaskManagementPage> {
   int _selectedIndex = 0;
+  String _selectedFilter = 'createdAt';
+
+  // Filtering options
+  final List<Map<String, String>> _filterOptions = [
+    {'value': 'createdAt', 'label': 'Recently Added'},
+    {'value': 'date', 'label': 'Due Date'},
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -28,11 +35,18 @@ class _TaskManagementPageState extends State<TaskManagementPage> {
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
-          IconButton(
+          PopupMenuButton<String>(
             icon: const Icon(Icons.filter_list),
-            onPressed: () {
-              // Add filter functionality if needed
+            onSelected: (String value) {
+              setState(() {
+                _selectedFilter = value;
+              });
             },
+            itemBuilder: (BuildContext context) => _filterOptions
+              .map((filter) => PopupMenuItem<String>(
+                value: filter['value'],
+                child: Text(filter['label']!),
+              )).toList(),
           ),
         ],
       ),
@@ -40,7 +54,7 @@ class _TaskManagementPageState extends State<TaskManagementPage> {
         stream: FirebaseFirestore.instance
             .collection('tasks')
             .where('userId', isEqualTo: widget.userId)
-            .orderBy('createdAt', descending: true)
+            .orderBy(_selectedFilter, descending: _selectedFilter == 'createdAt')
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
@@ -82,14 +96,12 @@ class _TaskManagementPageState extends State<TaskManagementPage> {
                   return Card(
                     margin: const EdgeInsets.only(bottom: 12),
                     child: ListTile(
-                      leading: Checkbox(
-                        value: isCompleted,
-                        onChanged: (bool? value) {
-                          FirebaseFirestore.instance
-                              .collection('tasks')
-                              .doc(task.id)
-                              .update({'isCompleted': value});
-                        },
+                      leading: Text(
+                        roomName,
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 14,
+                        ),
                       ),
                       title: Text(
                         taskData['title'] ?? '',
@@ -100,19 +112,11 @@ class _TaskManagementPageState extends State<TaskManagementPage> {
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (isOverdue)
-                            Text(
-                              '${_getDaysOverdue(date.toDate())} Overdue',
-                              style: const TextStyle(
-                                color: Colors.red,
-                                fontSize: 12,
-                              ),
-                            ),
                           Text(
-                            roomName,
+                            DateFormat('yyyy-MM-dd HH:mm').format(date!.toDate()),
                             style: const TextStyle(
                               color: Colors.grey,
-                              fontSize: 14,
+                              fontSize: 12,
                             ),
                           ),
                           if (taskData['notes']?.isNotEmpty ?? false)
@@ -126,18 +130,9 @@ class _TaskManagementPageState extends State<TaskManagementPage> {
                             ),
                         ],
                       ),
-                      trailing: PopupMenuButton<String>(
-                        onSelected: (String value) {
-                          if (value == 'delete') {
-                            _deleteTask(task.id);
-                          }
-                        },
-                        itemBuilder: (BuildContext context) => [
-                          const PopupMenuItem(
-                            value: 'delete',
-                            child: Text('Delete'),
-                          ),
-                        ],
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        onPressed: () => _deleteTask(task.id),
                       ),
                     ),
                   );

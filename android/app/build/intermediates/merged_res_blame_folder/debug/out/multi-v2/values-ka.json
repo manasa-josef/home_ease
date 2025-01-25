@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.example.home_ease.app-mergeDebugResources-51:/values-ka/values-ka.xml",
+            "outputFile": "com.example.home_ease.app-mergeDebugResources-56:/values-ka/values-ka.xml",
             "map": [
                 {
                     "source": "C:\\Users\\manus\\.gradle\\caches\\transforms-3\\53ef0ca18cbc54531f12bc5bf23de2cd\\transformed\\jetified-play-services-basement-18.4.0\\res\\values-ka\\values.xml",
