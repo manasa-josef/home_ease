@@ -706,7 +706,7 @@ Widget _buildGraph() {
                 return Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: Text(
-                    '\$${value.toInt()}',
+                    '\₹${value.toInt()}',
                     style: TextStyle(
                       color: Colors.grey[600],
                       fontSize: 12,
@@ -807,7 +807,7 @@ Widget _buildGraph() {
                   ),
                   children: [
                     TextSpan(
-                      text: '\$${barSpot.y.toStringAsFixed(2)}',
+                      text: '\₹${barSpot.y.toStringAsFixed(2)}',
                       style: const TextStyle(
                         color: Colors.black,
                         fontWeight: FontWeight.normal,
@@ -891,7 +891,7 @@ Widget _buildGraph() {
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  'Existing bill amount: \$${_existingAmount?.toStringAsFixed(2)}',
+                                  'Existing bill amount: \₹${_existingAmount?.toStringAsFixed(2)}',
                                   style: const TextStyle(color: Colors.blue),
                                 ),
                               ),
@@ -905,7 +905,7 @@ Widget _buildGraph() {
                         keyboardType: TextInputType.number,
                         decoration: InputDecoration(
                           labelText: _existingAmount != null ? 'Update Amount' : 'Amount',
-                          prefixIcon: const Icon(Icons.attach_money),
+                          prefixIcon: const Icon(Icons.currency_rupee),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),

@@ -297,7 +297,7 @@ class _BillsAnalysisPageState extends State<BillsAnalysisPage> {
                                 ),
                               ),
                               Text(
-                                '\$${_totalAmount.toStringAsFixed(2)}',
+                                '\₹${_totalAmount.toStringAsFixed(2)}',
                                 style: GoogleFonts.poppins(
                                   fontSize: 32,
                                   fontWeight: FontWeight.w600,
@@ -353,7 +353,7 @@ class _BillsAnalysisPageState extends State<BillsAnalysisPage> {
                                     ),
                                   ),
                                   Text(
-                                    '\$${_totalAmount.toStringAsFixed(0)}',
+                                    '\₹${_totalAmount.toStringAsFixed(0)}',
                                     style: GoogleFonts.poppins(
                                       fontSize: 24,
                                       fontWeight: FontWeight.w600,
@@ -395,7 +395,7 @@ class _BillsAnalysisPageState extends State<BillsAnalysisPage> {
                                 ),
                                 const Spacer(),
                                 Text(
-                                  '\$${(data['amount'] as double).toStringAsFixed(2)}',
+                                  '\₹ ${(data['amount'] as double).toStringAsFixed(2)}',
                                   style: GoogleFonts.poppins(
                                     fontWeight: FontWeight.w600,
                                   ),
