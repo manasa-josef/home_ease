@@ -64,13 +64,15 @@ class _TaskListPageState extends State<TaskListPage> {
         'nextOccurrence': nextOccurrence,
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Task completed. Next occurrence on ${DateFormat('yyyy-MM-dd').format(nextOccurrence)}',
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Task completed. Next occurrence on ${DateFormat('yyyy-MM-dd').format(nextOccurrence)}',
+            ),
           ),
-        ),
-      );
+        );
+      }
     } catch (e) {
       print('Error marking task as done: $e');
     }
@@ -88,13 +90,15 @@ class _TaskListPageState extends State<TaskListPage> {
         'nextOccurrence': nextOccurrence,
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Task skipped. Next occurrence on ${DateFormat('yyyy-MM-dd').format(nextOccurrence)}',
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Task skipped. Next occurrence on ${DateFormat('yyyy-MM-dd').format(nextOccurrence)}',
+            ),
           ),
-        ),
-      );
+        );
+      }
     } catch (e) {
       print('Error skipping task: $e');
     }
@@ -142,55 +146,81 @@ class _TaskListPageState extends State<TaskListPage> {
         return taskDate;
     }
   }
+bool _shouldShowTask(Map<String, dynamic> task) {
+  final completedInstances = List<String>.from(task['completedInstances'] ?? []);
+  final skippedInstances = List<String>.from(task['skippedInstances'] ?? []);
+  final currentDateKey = _getCurrentDateKey();
 
-  bool _shouldShowTask(Map<String, dynamic> task) {
-    final completedInstances = List<String>.from(task['completedInstances'] ?? []);
-    final skippedInstances = List<String>.from(task['skippedInstances'] ?? []);
-    final currentDateKey = _getCurrentDateKey();
-
-    if (completedInstances.contains(currentDateKey) || 
-        skippedInstances.contains(currentDateKey)) {
-      return false;
-    }
-
-    final repeat = task['repeat'];
-    if (repeat != null && repeat != 'Never') {
-      final nextOccurrence = task['nextOccurrence'] != null 
-          ? (task['nextOccurrence'] as Timestamp).toDate()
-          : _calculateNextOccurrence(task);
-      
-      final now = DateTime.now();
-      return now.year == nextOccurrence.year &&
-             now.month == nextOccurrence.month &&
-             now.day == nextOccurrence.day;
-    }
-
-    return true;
+  if (completedInstances.contains(currentDateKey) || skippedInstances.contains(currentDateKey)) {
+    return false;
   }
+
+  final repeat = task['repeat'];
+  final now = DateTime.now();
+  final taskDate = (task['date'] as Timestamp).toDate();
+
+  if (repeat != null && repeat != 'Never') {
+    final nextOccurrence = task['nextOccurrence'] != null
+        ? (task['nextOccurrence'] as Timestamp).toDate()
+        : _calculateNextOccurrence(task);
+
+    return (now.year == nextOccurrence.year &&
+            now.month == nextOccurrence.month &&
+            now.day == nextOccurrence.day) ||
+           now.isAfter(taskDate); // Show if overdue
+  }
+
+  return now.isAfter(taskDate) || 
+         (now.year == taskDate.year && now.month == taskDate.month && now.day == taskDate.day);
+}
+
 
   Widget _buildTaskStatus(Map<String, dynamic> task) {
     final taskDate = (task['date'] as Timestamp).toDate();
     final now = DateTime.now();
-
-    if (now.isAfter(taskDate)) {
-      final duration = now.difference(taskDate);
-      String overdueText;
-      
-      if (duration.inDays > 0) {
-        overdueText = 'Overdue by ${duration.inDays} day${duration.inDays > 1 ? 's' : ''}';
-      } else if (duration.inHours > 0) {
-        overdueText = 'Overdue by ${duration.inHours} hour${duration.inHours > 1 ? 's' : ''}';
-      } else {
-        overdueText = 'Overdue by ${duration.inMinutes} minute${duration.inMinutes > 1 ? 's' : ''}';
-      }
-
-      return Text(
-        overdueText,
-        style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-      );
-    }
-
-    return const SizedBox.shrink();
+    final duration = now.difference(taskDate);
+    
+    final dateStr = DateFormat('yyyy-MM-dd').format(taskDate);
+    final timeStr = DateFormat('HH:mm').format(taskDate);
+    
+    return Row(
+      children: [
+        const Icon(Icons.calendar_today, size: 16, color: Colors.red),
+        const SizedBox(width: 4),
+        Text(
+          dateStr,
+          style: const TextStyle(
+            color: Colors.red,
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(width: 8),
+        const Icon(Icons.access_time, size: 16, color: Colors.red),
+        const SizedBox(width: 4),
+        Text(
+          timeStr,
+          style: const TextStyle(
+            color: Colors.red,
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          duration.inDays > 0
+              ? 'Overdue by ${duration.inDays} day${duration.inDays > 1 ? 's' : ''}'
+              : duration.inHours > 0
+                  ? 'Overdue by ${duration.inHours} hour${duration.inHours > 1 ? 's' : ''}'
+                  : 'Overdue by ${duration.inMinutes} minute${duration.inMinutes > 1 ? 's' : ''}',
+          style: const TextStyle(
+            color: Colors.red,
+            fontWeight: FontWeight.bold,
+            fontSize: 12,
+          ),
+        ),
+      ],
+    );
   }
 
   @override
@@ -210,6 +240,10 @@ class _TaskListPageState extends State<TaskListPage> {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
           }
 
           final tasks = snapshot.data?.docs ?? [];
@@ -233,6 +267,10 @@ class _TaskListPageState extends State<TaskListPage> {
               final taskId = taskDoc.id;
               final taskDate = (task['date'] as Timestamp).toDate();
               final now = DateTime.now();
+              final isOverdue = now.isAfter(taskDate);
+
+              final dateStr = DateFormat('yyyy-MM-dd').format(taskDate);
+              final timeStr = DateFormat('HH:mm').format(taskDate);
 
               return Card(
                 margin: const EdgeInsets.only(bottom: 12),
@@ -245,12 +283,51 @@ class _TaskListPageState extends State<TaskListPage> {
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      now.isAfter(taskDate) 
-                        ? _buildTaskStatus(task)
-                        : Text(
-                            DateFormat('yyyy-MM-dd HH:mm').format(taskDate),
-                            style: const TextStyle(color: Colors.grey),
+                      if (isOverdue)
+                        _buildTaskStatus(task)
+                      else
+                        Row(
+                          children: [
+                            const Icon(Icons.calendar_today,
+                              size: 16,
+                              color: Colors.orange,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              dateStr,
+                              style: const TextStyle(
+                                color: Colors.orange,
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            const Icon(Icons.access_time,
+                              size: 16,
+                              color: Colors.green,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              timeStr,
+                              style: const TextStyle(
+                                color: Colors.green,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      if (task['notes']?.isNotEmpty ?? false)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            task['notes'],
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
+                        ),
                     ],
                   ),
                 ),
@@ -263,7 +340,7 @@ class _TaskListPageState extends State<TaskListPage> {
         onPressed: () => Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => TaskFormPage(
+            builder: (context) => ModernTaskFormPage(
               roomName: widget.roomName,
               roomId: widget.roomId,
               userId: widget.userId,

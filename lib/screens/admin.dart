@@ -85,7 +85,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       List<Map<String, dynamic>> monthInactive = [];
 
       for (var doc in querySnapshot.docs) {
-        Timestamp? lastActive = doc['lastActive'] as Timestamp?;
+        Timestamp? lastActive = doc['lastActiveDate'] as Timestamp?;
         if (lastActive != null) {
           DateTime lastActiveDate = lastActive.toDate();
           int daysInactive = now.difference(lastActiveDate).inDays;
@@ -222,7 +222,22 @@ class _AdminDashboardState extends State<AdminDashboard> {
       ),
     );
   }
-
+  Widget _buildThemeContainer({required Widget child}) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFFF0E6FF),  // Light lavender
+            Color(0xFFE6E6FA),  // Lavender
+            Color(0xFfD8BFD8),  // Thistle
+          ],
+        ),
+      ),
+      child: child,
+    );
+  }
   Widget _buildGradientButton() {
     return Container(
       margin: const EdgeInsets.all(16),
@@ -390,22 +405,175 @@ class _AdminDashboardState extends State<AdminDashboard> {
       ],
     );
   }
+  Widget _buildNavigationButtons() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: Row(
+        children: [
+          _buildNavButton('Users', 'User Activity'),
+          _buildNavButton('Tips', 'Tips'),
+          _buildNavButton('Inactive Users', 'Inactive'),
+        ],
+      ),
+    );
+  }
 
-  @override
+  Widget _buildNavButton(String view, String label) {
+    bool isSelected = _currentView == view;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _currentView = view),
+        child: Container(
+          margin: const EdgeInsets.all(4),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.white : Colors.transparent,
+            borderRadius: BorderRadius.circular(30),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: Colors.purple.withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: Offset(0, 4),
+                    )
+                  ]
+                : [],
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: isSelected ? Colors.deepPurple : Colors.deepPurple[300],
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+  Widget _buildProfileButton() {
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.account_circle),
+      itemBuilder: (BuildContext context) => [
+        const PopupMenuItem(
+          value: 'profile',
+          child: ListTile(
+            leading: Icon(Icons.person),
+            title: Text('Admin Profile'),
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'logout',
+          child: ListTile(
+            leading: Icon(Icons.logout),
+            title: Text('Logout'),
+          ),
+        ),
+      ],
+      onSelected: (value) {
+        if (value == 'profile') {
+          _showAdminProfile();
+        } else if (value == 'logout') {
+          _handleLogout();
+        }
+      },
+    );
+  }
+
+  void _showAdminProfile() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Admin Profile'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const CircleAvatar(
+                radius: 50,
+                child: Icon(Icons.person, size: 50),
+              ),
+              const SizedBox(height: 16),
+              const Text('Name: Admin User'),
+              const Text('Email: admin@homeease.com'),
+              const Text('Role: System Administrator'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _handleLogout() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Confirm Logout'),
+          content: const Text('Are you sure you want to logout?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                // Add your logout logic here
+                Navigator.pop(context); // Close dialog
+                Navigator.pushReplacementNamed(context, '/login'); // Navigate to login
+              },
+              child: const Text('Logout'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+ @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Admin Dashboard')),
-      body: Column(
-        children: [
-          _buildGradientButton(),
-          Expanded(
-            child: _currentView == 'Users'
-                ? _buildUsersView()
-                : _currentView == 'Tips'
-                    ? _buildTipsForm()
-                    : _buildInactiveUsersView(),
+      appBar: AppBar(
+        title: Text(
+          'Admin Dashboard', 
+          style: TextStyle(
+            color: Colors.deepPurple[800],
+            fontWeight: FontWeight.bold,
           ),
-        ],
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [_buildProfileButton()],
+      ),
+      extendBodyBehindAppBar: true,
+      body: _buildThemeContainer(
+        child: SafeArea(
+          child: Column(
+            children: [
+              _buildNavigationButtons(),
+              Expanded(
+                child: AnimatedSwitcher(
+                  duration: Duration(milliseconds: 300),
+                  child: _currentView == 'Users'
+                      ? _buildUsersView()
+                      : _currentView == 'Tips'
+                          ? _buildTipsForm()
+                          : _buildInactiveUsersView(),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

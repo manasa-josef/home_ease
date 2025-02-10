@@ -8,6 +8,7 @@ import 'package:home_ease/screens/settings.dart';
 import 'package:home_ease/screens/tasklist.dart';
 import 'package:home_ease/screens/taskmanagement.dart';
 import 'package:home_ease/screens/tips_and_tricks.dart';
+import 'package:lottie/lottie.dart';
 class HomeScreen extends StatefulWidget {
   final String userId;
   const HomeScreen({Key? key, required this.userId}) : super(key: key);
@@ -21,14 +22,125 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
   final PageController _pageController = PageController(initialPage: 0);
   String _fullName = ''; // Add this to store the user's full name
+  bool _hasOverdueTasks = false;
+   int _overdueCount = 0;
+
 
   @override
   void initState() {
     super.initState();
     _initializeDefaultRooms();
     _loadUserData();
-    updateLastActive(); // Add this to load user data
+    updateLastActive();
+    //_checkOverdueTasks(); 
   }
+Stream<int> _overdueTaskStream() {
+  final now = DateTime.now();
+  return _firestore
+      .collection('tasks')
+      .where('userId', isEqualTo: widget.userId)
+      .snapshots()
+      .map((snapshot) {
+    int overdueCount = 0;
+    for (var doc in snapshot.docs) {
+      final task = doc.data();
+      final taskDate = (task['date'] as Timestamp).toDate();
+      final completedInstances = List<String>.from(task['completedInstances'] ?? []);
+      final skippedInstances = List<String>.from(task['skippedInstances'] ?? []);
+      final currentDateKey = _getCurrentDateKey();
+
+      if (taskDate.isBefore(now) &&
+          !completedInstances.contains(currentDateKey) &&
+          !skippedInstances.contains(currentDateKey)) {
+        overdueCount++;
+      }
+    }
+    return overdueCount;
+  });
+}
+  
+Widget _buildStatusCard() {
+  return StreamBuilder<int>(
+    stream: _overdueTaskStream(),
+    builder: (context, snapshot) {
+      if (snapshot.hasError) {
+        return const Center(child: Text('Error loading tasks'));
+      }
+
+      int overdueCount = snapshot.data ?? 0;
+      bool hasOverdueTasks = overdueCount > 0;
+
+      return Container(
+        margin: const EdgeInsets.symmetric(vertical: 16),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: hasOverdueTasks
+                ? [Colors.red.shade100, Colors.red.shade200]
+                : [Colors.green.shade100, Colors.green.shade200],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              spreadRadius: 2,
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              height: 80,
+              width: 80,
+              child: Lottie.asset(
+                hasOverdueTasks ? 'assets/sad_puppy2.json' : 'assets/happy_puppy.json',
+                fit: BoxFit.contain,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    hasOverdueTasks ? 'Tasks Need Attention!' : 'You are Doing Great!',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: hasOverdueTasks ? Colors.red.shade700 : Colors.green.shade700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    hasOverdueTasks
+                        ? 'You have $overdueCount overdue ${overdueCount == 1 ? 'task' : 'tasks'} to complete'
+                        : 'All tasks are up to date. Keep it up!',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: hasOverdueTasks ? Colors.red.shade600 : Colors.green.shade600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+
+
+String _getCurrentDateKey() {
+  final now = DateTime.now();
+  return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+}
+
   Future<void> updateLastActive() async {
   User? user = FirebaseAuth.instance.currentUser;
   if (user != null) {
@@ -94,56 +206,61 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-
-  Widget _buildHomeContent() {
+ Widget _buildHomeContent() {
     return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
-            const Text(
-              "My Home",
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-            
-            const Text(
-              "Welcome back!",
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.black54,
-              ),
-            ),
-            const SizedBox(height: 20),
-            
-
-            // Search Bar
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(15),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "My Home",
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          // Using a gradient text for extra style
+                          foreground: Paint()
+                            ..shader = LinearGradient(
+                              colors: [
+                                Colors.purple.shade700,
+                                Colors.purple.shade500,
+                              ],
+                            ).createShader(const Rect.fromLTWH(0.0, 0.0, 200.0, 70.0)),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        "Welcome back,",
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _fullName.isNotEmpty ? _fullName : "User",
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
                   ),
+                  
                 ],
               ),
-              child: const TextField(
-                decoration: InputDecoration(
-                  icon: Icon(Icons.search, color: Colors.grey),
-                  hintText: "Search...",
-                  border: InputBorder.none,
-                  hintStyle: TextStyle(color: Colors.grey),
-                ),
-              ),
             ),
+
+            _buildStatusCard(),
             const SizedBox(height: 24),
 
             // Categories Section
@@ -157,13 +274,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                TextButton(
-                  onPressed: () {},
-                  child: const Text(
-                    "View All",
-                    style: TextStyle(color: Colors.purple),
-                  ),
-                ),
+                
               ],
             ),
             const SizedBox(height: 16),

@@ -1,6 +1,10 @@
+import 'dart:math';
+
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:home_ease/screens/bill_trend_graph.dart';
 import 'package:intl/intl.dart';
 import 'package:month_picker_dialog/month_picker_dialog.dart';
@@ -34,9 +38,15 @@ class _MonthlyBillsPageState extends State<MonthlyBillsPage> {
         }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error initializing bills: ${e.toString()}')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error initializing bills: ${e.toString()}'),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+      }
     }
   }
 
@@ -44,7 +54,11 @@ class _MonthlyBillsPageState extends State<MonthlyBillsPage> {
     final newBillName = _newBillController.text.trim();
     if (newBillName.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a bill name')),
+        SnackBar(
+          content: const Text('Please enter a bill name'),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
       );
       return;
     }
@@ -52,87 +66,46 @@ class _MonthlyBillsPageState extends State<MonthlyBillsPage> {
     try {
       await _firestore.collection('bills').add({'name': newBillName});
       _newBillController.clear();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$newBillName added successfully'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error adding bill: ${e.toString()}')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error adding bill: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+      }
     }
   }
 
-  Widget _buildBillBoxes() {
-    return StreamBuilder<QuerySnapshot>(
-      stream: _firestore.collection('bills').snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const Center(child: Text('No bills available'));
-        }
-
-        final bills = snapshot.data!.docs;
-
-        return GridView.builder(
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            childAspectRatio: 1.5,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
-          ),
-          itemCount: bills.length,
-          itemBuilder: (context, index) {
-            final billName = bills[index]['name'];
-            return Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: InkWell(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => BillDetailPage(billName: billName),
-                    ),
-                  );
-                },
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Colors.blue.shade400, Colors.blue.shade700],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        _getBillIcon(billName),
-                        size: 32,
-                        color: Colors.white,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        billName,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
+  // Get gradient colors based on bill type
+  List<Color> _getBillGradient(String billName) {
+    switch (billName.toLowerCase()) {
+      case 'water':
+        return [const Color(0xFF48CAE4), const Color(0xFF023E8A)];
+      case 'gas':
+        return [const Color(0xFFFFB703), const Color(0xFFFB8500)];
+      case 'electricity':
+        return [const Color(0xFFFFAFCC), const Color(0xFFFF006E)];
+      case 'internet':
+        return [const Color(0xFF80FFDB), const Color(0xFF2EC4B6)];
+      case 'rent':
+        return [const Color(0xFFBDB2FF), const Color(0xFF7371FC)];
+      default:
+        return [const Color(0xFF9381FF), const Color(0xFF593C8F)];
+    }
   }
 
   IconData _getBillIcon(String billName) {
@@ -148,58 +121,231 @@ class _MonthlyBillsPageState extends State<MonthlyBillsPage> {
       case 'rent':
         return Icons.home;
       default:
-        return Icons.receipt;
+        return Icons.receipt_long;
     }
   }
-@override
+
+  Widget _buildBillBoxes() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: _firestore.collection('bills').snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.receipt_long, size: 64, color: Colors.grey[400]),
+                const SizedBox(height: 16),
+                Text(
+                  'No bills available',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                Text(
+                  'Add your first bill below',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    color: Colors.grey[500],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final bills = snapshot.data!.docs;
+
+        return GridView.builder(
+          padding: EdgeInsets.zero,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            childAspectRatio: 1.1,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+          ),
+          itemCount: bills.length,
+          itemBuilder: (context, index) {
+            final billName = bills[index]['name'];
+            final gradientColors = _getBillGradient(billName);
+
+            return Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => BillDetailPage(billName: billName),
+                    ),
+                  );
+                },
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: gradientColors,
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          _getBillIcon(billName),
+                          size: 32,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        billName,
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: const Text('Monthly Bills'),
+        title: Text(
+          'Monthly Bills',
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         elevation: 0,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            // Header Section
+            Text(
               'Your Bills',
-              style: TextStyle(
+              style: GoogleFonts.poppins(
                 fontSize: 24,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const BillsAnalysisPage(),
+            
+            // Analysis Button
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.purple[400]!, Colors.purple[600]!],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                );
-              },
-              icon: const Icon(Icons.analytics),
-              label: const Text('View Bills Analysis'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
+                  borderRadius: BorderRadius.circular(20),
                 ),
-                minimumSize: const Size(double.infinity, 48),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                child: InkWell(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const BillsAnalysisPage(),
+                      ),
+                    );
+                  },
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.analytics,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Bills Analysis',
+                              style: GoogleFonts.poppins(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Text(
+                              'View detailed expense reports',
+                              style: GoogleFonts.poppins(
+                                color: Colors.white.withOpacity(0.8),
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        Icons.arrow_forward_ios,
+                        color: Colors.white.withOpacity(0.8),
+                        size: 20,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
+            
+            // Bills Grid
             Expanded(child: _buildBillBoxes()),
+            
+            // Add New Bill Section
             const SizedBox(height: 16),
             Card(
+              elevation: 0,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(20),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
@@ -208,25 +354,41 @@ class _MonthlyBillsPageState extends State<MonthlyBillsPage> {
                     Expanded(
                       child: TextField(
                         controller: _newBillController,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           hintText: 'Enter new bill name',
-                          border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(
+                          hintStyle: GoogleFonts.poppins(
+                            color: Colors.grey[400],
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey[100],
+                          contentPadding: const EdgeInsets.symmetric(
                             horizontal: 16,
                             vertical: 12,
                           ),
                         ),
+                        style: GoogleFonts.poppins(),
                       ),
                     ),
                     const SizedBox(width: 16),
                     ElevatedButton.icon(
                       onPressed: _addNewBill,
                       icon: const Icon(Icons.add),
-                      label: const Text('Add Bill'),
+                      label: Text(
+                        'Add Bill',
+                        style: GoogleFonts.poppins(),
+                      ),
                       style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue[600],
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
+                          horizontal: 20,
                           vertical: 12,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
                     ),
@@ -241,7 +403,6 @@ class _MonthlyBillsPageState extends State<MonthlyBillsPage> {
   }
 }
 // Previous MonthlyBillsPage code remains the same...
-
 class BillDetailPage extends StatefulWidget {
   final String billName;
 
@@ -257,15 +418,81 @@ class _BillDetailPageState extends State<BillDetailPage> {
   DateTime _selectedMonth = DateTime.now();
   String? _existingBillDocId;
   double? _existingAmount;
+  List<FlSpot> _billHistory = [];
 
   @override
   void initState() {
     super.initState();
     _checkExistingBillAmount();
+    _loadBillHistory();
+  }
+Future<void> _loadBillHistory() async {
+  final userId = FirebaseAuth.instance.currentUser?.uid;
+  if (userId == null) {
+    print('DEBUG: No user ID found');
+    return;
   }
 
-  
+  try {
+    print('DEBUG: Starting to load bill history for ${widget.billName}');
+    
+    // First, let's just get ALL documents for this bill and user to see what we have
+    final querySnapshot = await _firestore
+        .collection('billAmounts')
+        .where('userId', isEqualTo: userId)
+        .where('billName', isEqualTo: widget.billName)
+        .get();
 
+    print('DEBUG: Found ${querySnapshot.docs.length} total documents');
+    
+    // Print all documents to see what we have
+    querySnapshot.docs.forEach((doc) {
+      final data = doc.data();
+      print('DEBUG: Document data: ${data.toString()}');
+    });
+
+    if (querySnapshot.docs.isEmpty) {
+      print('DEBUG: No documents found in query');
+      setState(() {
+        _billHistory = [];
+      });
+      return;
+    }
+
+    // Convert documents to graph points
+    final spots = querySnapshot.docs.asMap().entries.map((entry) {
+      final data = entry.value.data();
+      final amount = (data['amount'] as num).toDouble();
+      final spot = FlSpot(entry.key.toDouble(), amount);
+      print('DEBUG: Created spot: x=${spot.x}, y=${spot.y}');
+      return spot;
+    }).toList();
+
+    print('DEBUG: Created ${spots.length} spots for the graph');
+
+    if (mounted) {
+      setState(() {
+        _billHistory = spots;
+        print('DEBUG: Set _billHistory with ${_billHistory.length} spots');
+      });
+    }
+  } catch (e, stackTrace) {
+    print('DEBUG: Error loading bill history: $e');
+    print('DEBUG: Stack trace: $stackTrace');
+    if (mounted) {
+      setState(() {
+        _billHistory = [];
+      });
+    }
+  }
+}
+
+// Add this debug method to your widget
+void _debugPrintCurrentState() {
+  print('DEBUG: Current state:');
+  print('DEBUG: _billHistory length: ${_billHistory.length}');
+  print('DEBUG: _billHistory contents: $_billHistory');
+}
   Future<void> _checkExistingBillAmount() async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) return;
@@ -300,7 +527,6 @@ class _BillDetailPageState extends State<BillDetailPage> {
     }
   }
 
-  
   Future<bool> _showUpdateConfirmationDialog() async {
     final result = await showDialog<bool>(
       context: context,
@@ -314,9 +540,9 @@ class _BillDetailPageState extends State<BillDetailPage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Current amount: \$${_existingAmount?.toStringAsFixed(2)}'),
+              Text('Current amount: \₹${_existingAmount?.toStringAsFixed(2)}'),
               const SizedBox(height: 8),
-              Text('New amount: \$${double.tryParse(_amountController.text)?.toStringAsFixed(2)}'),
+              Text('New amount: \₹${double.tryParse(_amountController.text)?.toStringAsFixed(2)}'),
               const SizedBox(height: 16),
               const Text('Do you want to update this bill amount?'),
             ],
@@ -339,96 +565,266 @@ class _BillDetailPageState extends State<BillDetailPage> {
         );
       },
     );
-    return result ?? false;  // Return false if result is null
+    return result ?? false;
   }
 
   Future<void> _addOrUpdateBillAmount() async {
-    if (_amountController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter an amount')),
-      );
+  if (_amountController.text.isEmpty) {
+    print('DEBUG: No amount entered');
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Please enter an amount')),
+    );
+    return;
+  }
+
+  try {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) {
+      print('DEBUG: No user ID found when adding/updating bill');
       return;
     }
 
-    try {
-      final userId = FirebaseAuth.instance.currentUser?.uid;
-      if (userId == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('User not authenticated')),
-        );
+    final monthKey = "${_selectedMonth.year}-${_selectedMonth.month.toString().padLeft(2, '0')}";
+    final newAmount = double.parse(_amountController.text);
+    
+    print('DEBUG: Adding/updating bill amount:');
+    print('DEBUG: Month Key: $monthKey');
+    print('DEBUG: Amount: $newAmount');
+    print('DEBUG: Bill Name: ${widget.billName}');
+    print('DEBUG: User ID: $userId');
+
+    if (_existingBillDocId != null) {
+      print('DEBUG: Updating existing bill document: $_existingBillDocId');
+      final shouldUpdate = await _showUpdateConfirmationDialog();
+      if (!shouldUpdate) {
+        print('DEBUG: Update cancelled by user');
         return;
       }
 
-      final monthKey = "${_selectedMonth.year}-${_selectedMonth.month.toString().padLeft(2, '0')}";
-      final newAmount = double.parse(_amountController.text);
-
-      if (_existingBillDocId != null) {
-        // Show update confirmation dialog
-        final shouldUpdate = await _showUpdateConfirmationDialog();
-        if (!shouldUpdate) {
-          return;  // User cancelled the update
-        }
-
-        // Update existing bill amount
-        await _firestore.collection('billAmounts').doc(_existingBillDocId).update({
-          'amount': newAmount,
-          'timestamp': FieldValue.serverTimestamp(),
-        });
-
-        if (mounted) {  // Check if widget is still mounted
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Bill amount updated successfully!')),
-          );
-        }
-      } else {
-        // Add new bill amount
-        await _firestore.collection('billAmounts').add({
-          'billName': widget.billName,
-          'amount': newAmount,
-          'monthKey': monthKey,
-          'userId': userId,
-          'timestamp': FieldValue.serverTimestamp(),
-        });
-
-        if (mounted) {  // Check if widget is still mounted
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Bill amount added successfully!')),
-          );
-        }
-      }
-
-      // Refresh the existing bill amount check
-      if (mounted) {  // Check if widget is still mounted
-        await _checkExistingBillAmount();
-      }
-    } catch (e) {
-      if (mounted) {  // Check if widget is still mounted
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
-        );
-      }
+      await _firestore.collection('billAmounts').doc(_existingBillDocId).update({
+        'amount': newAmount,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+      print('DEBUG: Bill amount updated successfully');
+    } else {
+      print('DEBUG: Creating new bill document');
+      final docRef = await _firestore.collection('billAmounts').add({
+        'billName': widget.billName,
+        'amount': newAmount,
+        'monthKey': monthKey,
+        'userId': userId,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+      print('DEBUG: Created new document with ID: ${docRef.id}');
     }
-  }
 
-Future<void> _selectMonth() async {
-  final DateTime? picked = await showMonthPicker(
-    context: context,
-    initialDate: _selectedMonth,
-    firstDate: DateTime(2000),
-    lastDate: DateTime(2100),
-  );
-
-  if (picked != null) {
-    setState(() {
-      _selectedMonth = picked;
-    });
-    await _checkExistingBillAmount();
+    if (mounted) {
+      print('DEBUG: Reloading data after update');
+      await _checkExistingBillAmount();
+      // Add a longer delay to ensure Firestore update is complete
+      await Future.delayed(const Duration(seconds: 1));
+      await _loadBillHistory();
+      _debugPrintCurrentState();
+    }
+  } catch (e, stackTrace) {
+    print('DEBUG: Error in _addOrUpdateBillAmount: $e');
+    print('DEBUG: Stack trace: $stackTrace');
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString()}')),
+      );
+    }
   }
 }
 
+  Future<void> _selectMonth() async {
+    final DateTime? picked = await showMonthPicker(
+      context: context,
+      initialDate: _selectedMonth,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
 
-
+    if (picked != null) {
+      setState(() {
+        _selectedMonth = picked;
+      });
+      await _checkExistingBillAmount();
+    }
+  }
+Widget _buildGraph() {
+  print('DEBUG: Building graph');
+  print('DEBUG: _billHistory length: ${_billHistory.length}');
   
+  if (_billHistory.isEmpty) {
+    print('DEBUG: No bill history available for graph');
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.all(16.0),
+        child: Text('No payment history available'),
+      ),
+    );
+  }
+
+  // Print each point being plotted
+  _billHistory.forEach((spot) {
+    print('DEBUG: Plotting point: x=${spot.x}, y=${spot.y}');
+  });
+
+  // Find min and max values for better Y axis scaling
+  double maxY = _billHistory.map((spot) => spot.y).reduce(max);
+  double minY = _billHistory.map((spot) => spot.y).reduce(min);
+  double yPadding = (maxY - minY) * 0.1; // Add 10% padding
+
+  return SizedBox(
+    height: 200,
+    child: LineChart(
+      LineChartData(
+        minX: 0,
+        maxX: (_billHistory.length - 1).toDouble(),
+        minY: max(0, minY - yPadding), // Ensure we don't go below 0
+        maxY: maxY + yPadding,
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: false,
+          horizontalInterval: 50,
+          getDrawingHorizontalLine: (value) {
+            return FlLine(
+              color: Colors.grey.withOpacity(0.2),
+              strokeWidth: 1,
+            );
+          },
+        ),
+        titlesData: FlTitlesData(
+          show: true,
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              interval: 100,
+              reservedSize: 40,
+              getTitlesWidget: (value, meta) {
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: Text(
+                    '\$${value.toInt()}',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 12,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              interval: 1,
+              reservedSize: 30,
+              getTitlesWidget: (value, meta) {
+                int index = value.toInt();
+                if (index >= 0 && index < _billHistory.length) {
+                  final date = DateTime.now().subtract(
+                    Duration(days: (_billHistory.length - index - 1) * 30),
+                  );
+                  return Text(
+                    DateFormat('MMM').format(date),
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 12,
+                    ),
+                  );
+                }
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+          rightTitles: AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          topTitles: AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+        ),
+        borderData: FlBorderData(
+          show: true,
+          border: Border(
+            bottom: BorderSide(color: Colors.grey[300]!, width: 1),
+            left: BorderSide(color: Colors.grey[300]!, width: 1),
+          ),
+        ),
+        lineBarsData: [
+          LineChartBarData(
+            spots: _billHistory,
+            isCurved: true,
+            color: Colors.blue[400],
+            barWidth: 3,
+            isStrokeCapRound: true,
+            dotData: FlDotData(
+              show: true,
+              getDotPainter: (spot, percent, barData, index) {
+                return FlDotCirclePainter(
+                  radius: 4,
+                  color: Colors.white,
+                  strokeWidth: 2,
+                  strokeColor: Colors.blue[400]!,
+                );
+              },
+            ),
+            belowBarData: BarAreaData(
+              show: true,
+              gradient: LinearGradient(
+                colors: [
+                  Colors.blue[400]!.withOpacity(0.3),
+                  Colors.blue[400]!.withOpacity(0.0),
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+            ),
+          ),
+        ],
+        lineTouchData: LineTouchData(
+          enabled: true,
+          touchTooltipData: LineTouchTooltipData(
+            tooltipPadding: const EdgeInsets.all(8),
+            tooltipBorder: BorderSide(
+              color: Colors.blue[400]!,
+              width: 1,
+            ),
+            tooltipRoundedRadius: 8,
+            tooltipMargin: 8,
+            getTooltipItems: (List<LineBarSpot> touchedBarSpots) {
+              return touchedBarSpots.map((barSpot) {
+                final date = DateTime.now().subtract(
+                  Duration(days: (_billHistory.length - barSpot.x.toInt() - 1) * 30),
+                );
+                return LineTooltipItem(
+                  '${DateFormat('MMM yyyy').format(date)}\n',
+                  const TextStyle(
+                    color: Colors.black,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  children: [
+                    TextSpan(
+                      text: '\$${barSpot.y.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.normal,
+                      ),
+                    ),
+                  ],
+                );
+              }).toList();
+            },
+          ),
+          handleBuiltInTouches: true,
+        ),
+      ),
+    ),
+  );
+}
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -538,42 +934,35 @@ Future<void> _selectMonth() async {
                     ],
                   ),
                 ),
-              ), 
-            // Add spacing
-            const SizedBox(height: 16),
-            
-            // Add the trend graph
-            Card(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Payment History',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue.shade700,
+              const SizedBox(height: 16),
+              Card(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Payment History',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue.shade700,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    BillTrendGraph(
-                      billName: widget.billName,
-                      userId: FirebaseAuth.instance.currentUser?.uid ?? '',
-                      firestore: _firestore,
-                    ),
-                  ],
+                      const SizedBox(height: 16),
+                      _buildGraph(),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 }

@@ -105,46 +105,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
                 const SizedBox(height: 20),
 
-                // Preferences Section
-                _sectionTitle("PREFERENCES"),
-                _settingsTile(
-                  icon: Icons.language,
-                  title: "Language",
-                  onTap: () {
-                    // Add language change functionality
-                  },
-                ),
-                _toggleTile(
-                  icon: Icons.dark_mode_outlined,
-                  title: "Dark Mode",
-                  value: isDarkMode,
-                  onChanged: (val) {
-                    setState(() {
-                      isDarkMode = val;
-                    });
-                  },
-                ),
-                _toggleTile(
-                  icon: Icons.notifications_outlined,
-                  title: "Received Notifications",
-                  value: notificationsEnabled,
-                  onChanged: (val) {
-                    setState(() {
-                      notificationsEnabled = val;
-                    });
-                  },
-                ),
-                _toggleTile(
-                  icon: Icons.play_circle_outline,
-                  title: "Play in background",
-                  value: playInBackground,
-                  onChanged: (val) {
-                    setState(() {
-                      playInBackground = val;
-                    });
-                  },
-                ),
-
+                
                 const SizedBox(height: 20),
 
                 // Logout Section
