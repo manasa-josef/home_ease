@@ -15,7 +15,6 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
     
   );
-     updateLastActive(); 
 
   runApp(const MyApp());
 }
@@ -39,14 +38,5 @@ class MyApp extends StatelessWidget {
       // Optionally, set initial route
       initialRoute: '/',
     );
-  }
-}
-
-Future<void> updateLastActive() async {
-  User? user = FirebaseAuth.instance.currentUser;
-  if (user != null) {
-    await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
-      'lastActiveDate': FieldValue.serverTimestamp(),
-    });
   }
 }

@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:mailer/mailer.dart';
 import 'package:mailer/smtp_server.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({Key? key}) : super(key: key);
@@ -75,7 +76,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     }
   }
 
-  Future<void> _fetchInactiveUsers() async {
+   Future<void> _fetchInactiveUsers() async {
     setState(() => _isLoading = true);
     try {
       QuerySnapshot querySnapshot = await FirebaseFirestore.instance.collection('users').get();
@@ -92,14 +93,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
           if (daysInactive >= 7 && daysInactive < 30) {
             weekInactive.add({
-              'id': doc.id,
               'name': doc['fullName'] ?? 'No Name',
               'email': doc['email'] ?? 'No Email',
               'lastActive': lastActiveDate,
             });
           } else if (daysInactive >= 30) {
             monthInactive.add({
-              'id': doc.id,
               'name': doc['fullName'] ?? 'No Name',
               'email': doc['email'] ?? 'No Email',
               'lastActive': lastActiveDate,
@@ -149,37 +148,40 @@ class _AdminDashboardState extends State<AdminDashboard> {
     }
   }
 
-  Future<void> _sendEmails() async {
-    setState(() => _isLoading = true);
-    try {
-      final smtpServer = gmail('manasajosef05@gmail.com', 'hpid bgme wqvc rrgk'); // Replace with your credentials
-
-      for (var user in _inactiveUsers) {
-        final message = Message()
-          ..from = Address('manasajosef05@gmail.com', 'Admin')
-          ..recipients.add(user['email'])
-          ..subject = _inactiveCategory == 'Week Inactive'
-              ? 'We Miss You at HomeEase!'
-              : 'It’s Been a While! Come Back to HomeEase'
-          ..text = _inactiveCategory == 'Week Inactive'
-              ? 'Hello ${user['name']},\n\nWe noticed you haven’t been active for a week. We have great home maintenance tips waiting for you. Come back now!\n\nBest Regards,\nHomeEase Team'
-              : 'Hello ${user['name']},\n\nIt’s been a month since we last saw you. We’d love to have you back to explore new home maintenance tips.\n\nBest Regards,\nHomeEase Team';
-
-        await send(message, smtpServer);
-      }
-
+   Future<void> _openMailApp() async {
+    if (_inactiveUsers.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Emails sent successfully!')),
+        const SnackBar(content: Text('No inactive users to email.')),
       );
-    } catch (e) {
-      print('Error sending emails: $e');
+      return;
+    }
+
+    final String subject = _inactiveCategory == 'Week Inactive'
+        ? 'We Miss You at HomeEase!'
+        : 'It’s Been a While! Come Back to HomeEase';
+    
+    final String body = _inactiveCategory == 'Week Inactive'
+        ? 'Hello,\n\nWe noticed some of you haven’t been active for a week. We have great home maintenance tips waiting for you. Come back now!\n\nBest Regards,\nHomeEase Team'
+        : 'Hello,\n\nIt’s been a month since we last saw some of you. We’d love to have you back to explore new home maintenance tips.\n\nBest Regards,\nHomeEase Team';
+
+    final List recipientEmails =
+        _inactiveUsers.map((user) => user['email']).toList();
+
+    final Uri emailLaunchUri = Uri(
+      scheme: 'mailto',
+      path: recipientEmails.join(','),
+      queryParameters: {'subject': subject, 'body': body},
+    );
+
+    if (await canLaunchUrl(emailLaunchUri)) {
+      await launchUrl(emailLaunchUri);
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to send emails: $e')),
+        const SnackBar(content: Text('Could not open email app.')),
       );
-    } finally {
-      setState(() => _isLoading = false);
     }
   }
+
 
   Widget _buildUserActivityChart(List<QueryDocumentSnapshot> users) {
     Map<DateTime, int> usersByDate = {};
@@ -355,6 +357,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
+   
   Widget _buildInactiveUsersView() {
     return Column(
       children: [
@@ -396,10 +399,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
         Padding(
           padding: const EdgeInsets.all(16),
           child: ElevatedButton(
-            onPressed: _inactiveUsers.isEmpty || _isLoading ? null : _sendEmails,
+            onPressed: _isLoading || _inactiveUsers.isEmpty ? null : _openMailApp,
             child: _isLoading
                 ? const CircularProgressIndicator(color: Colors.white)
-                : Text('Send Email to $_inactiveCategory Users'),
+                : const Text('Send Email to All Inactive Users'),
           ),
         ),
       ],

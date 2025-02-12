@@ -71,7 +71,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                     onPressed: _isLoading ? null : _resetPassword,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
-                      foregroundColor: Colors.green,
+                      foregroundColor: const Color.fromARGB(255, 152, 108, 194),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                     ),
                     child: _isLoading
