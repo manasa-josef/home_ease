@@ -14,7 +14,7 @@ class _AIChatState extends State<AIChat> {
 
   // Hugging Face API details
   final String _apiUrl = 'https://api-inference.huggingface.co/models/tiiuae/falcon-7b-instruct';
-  final String _huggingFaceToken = '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'; // Replace with your token
+  final String _huggingFaceToken = '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'; 
 
   Future<void> _sendMessage(String message) async {
     if (message.trim().isEmpty) return;
