@@ -381,22 +381,24 @@ String _getCurrentDateKey() {
                     final room = snapshot.data!.docs[index];
                     final roomData = room.data() as Map<String, dynamic>;
                     return RoomCard(
-                      icon: IconData(
-                        int.parse(roomData['icon']),
-                        fontFamily: 'MaterialIcons',
-                      ),
-                      roomName: roomData['name'],
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => TaskListPage(
-                            roomId: room.id,
-                            roomName: roomData['name'],
-                            userId: widget.userId,
-                          ),
-                        ),
-                      ),
-                    );
+  icon: IconData(
+    int.tryParse(roomData['icon'].toString()) ?? Icons.device_unknown.codePoint,
+    fontFamily: 'MaterialIcons',
+  ),
+  roomName: roomData['name'],
+  onTap: () => Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => TaskListPage(
+        roomId: room.id,
+        roomName: roomData['name'],
+        userId: widget.userId,
+      ),
+    ),
+  ),
+);
+
+
                   },
                 );
               },

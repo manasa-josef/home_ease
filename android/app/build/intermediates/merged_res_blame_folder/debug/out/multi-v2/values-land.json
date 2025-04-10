@@ -1,10 +1,10 @@
 {
     "logs": [
         {
-            "outputFile": "com.example.home_ease.app-mergeDebugResources-56:/values-land/values-land.xml",
+            "outputFile": "com.example.home_ease.app-mergeDebugResources-57:/values-land/values-land.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\manus\\.gradle\\caches\\transforms-3\\5038f794bd3738c2d358d950ce013070\\transformed\\appcompat-1.1.0\\res\\values-land\\values-land.xml",
+                    "source": "C:\\Users\\manus\\.gradle\\caches\\transforms-3\\403fcc695aefcf6d88e061b6153a07cc\\transformed\\appcompat-1.1.0\\res\\values-land\\values-land.xml",
                     "from": {
                         "startLines": "2,3,4",
                         "startColumns": "4,4,4",

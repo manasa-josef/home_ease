@@ -37,10 +37,6 @@ class _AIChatState extends State<AIChat> {
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
 
-        // Debug prints for response
-        print('Raw Response: ${response.body}');
-        print('Decoded Response: $responseData');
-
         // Extract the AI response
         String aiResponse;
         if (responseData is List && responseData.isNotEmpty && responseData[0].containsKey('generated_text')) {
@@ -76,27 +72,40 @@ class _AIChatState extends State<AIChat> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: Text('Home Maintenance AI'),
+        title: Text('Home Maintenance AI', style: TextStyle(color: Colors.white)),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                return _buildMessageBubble(_messages[index]);
-              },
-            ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFFD8BFD8), Color(0xFFEEEAF7)], // Light lavender gradient
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
           ),
-          if (_isLoading) ...[
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              child: CircularProgressIndicator(),
-            )
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: ListView.builder(
+                padding: EdgeInsets.only(top: 80), // Space for AppBar
+                itemCount: _messages.length,
+                itemBuilder: (context, index) {
+                  return _buildMessageBubble(_messages[index]);
+                },
+              ),
+            ),
+            if (_isLoading)
+              Padding(
+                padding: const EdgeInsets.all(10),
+                child: CircularProgressIndicator(color: Colors.deepPurple),
+              ),
+            _buildInputArea(),
           ],
-          _buildInputArea(),
-        ],
+        ),
       ),
     );
   }
@@ -106,16 +115,30 @@ class _AIChatState extends State<AIChat> {
     return Align(
       alignment: isUserMessage ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: EdgeInsets.all(8),
-        padding: EdgeInsets.all(12),
+        margin: EdgeInsets.symmetric(vertical: 4, horizontal: 12),
+        padding: EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: isUserMessage ? Colors.blue[100] : Colors.grey[200],
-          borderRadius: BorderRadius.circular(12),
+          color: isUserMessage ? Colors.deepPurple[200] : Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(16),
+            topRight: Radius.circular(16),
+            bottomLeft: isUserMessage ? Radius.circular(16) : Radius.circular(4),
+            bottomRight: isUserMessage ? Radius.circular(4) : Radius.circular(16),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black26,
+              blurRadius: 4,
+              spreadRadius: 1,
+              offset: Offset(2, 2),
+            ),
+          ],
         ),
         child: Text(
           message['text'] ?? '',
           style: TextStyle(
-            color: isUserMessage ? Colors.blue[900] : Colors.black87,
+            fontSize: 16,
+            color: isUserMessage ? Colors.white : Colors.black87,
           ),
         ),
       ),
@@ -124,27 +147,52 @@ class _AIChatState extends State<AIChat> {
 
   Widget _buildInputArea() {
     return Padding(
-      padding: const EdgeInsets.all(8.0),
+      padding: const EdgeInsets.all(12.0),
       child: Row(
         children: [
           Expanded(
-            child: TextField(
-              controller: _textController,
-              decoration: InputDecoration(
-                hintText: 'Ask a home maintenance question...',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(25),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 4,
+                    spreadRadius: 1,
+                    offset: Offset(1, 1),
+                  ),
+                ],
               ),
-              onSubmitted: _isLoading ? null : _sendMessage,
+              child: TextField(
+                controller: _textController,
+                decoration: InputDecoration(
+                  hintText: 'Ask a home maintenance question...',
+                  contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  border: InputBorder.none,
+                ),
+                onSubmitted: _isLoading ? null : _sendMessage,
+              ),
             ),
           ),
           SizedBox(width: 8),
-          IconButton(
-            icon: Icon(Icons.send),
-            onPressed: _isLoading
-                ? null
-                : () => _sendMessage(_textController.text),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.deepPurple,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.deepPurple.withOpacity(0.5),
+                  blurRadius: 4,
+                  spreadRadius: 1,
+                  offset: Offset(1, 1),
+                ),
+              ],
+            ),
+            child: IconButton(
+              icon: Icon(Icons.send, color: Colors.white),
+              onPressed: _isLoading ? null : () => _sendMessage(_textController.text),
+            ),
           ),
         ],
       ),

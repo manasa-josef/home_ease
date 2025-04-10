@@ -136,30 +136,36 @@ Future<void> _selectRoom() async {
           }
 
           return ListView.builder(
-            itemCount: rooms.length,
-            itemBuilder: (context, index) {
-              final room = rooms[index];
-              final roomData = room.data() as Map<String, dynamic>;
-              final roomName = roomData['name'] as String;
-              final roomIcon = roomData['icon'] ?? Icons.room_outlined;
+  itemCount: rooms.length,
+  itemBuilder: (context, index) {
+    final room = rooms[index];
+    final roomData = room.data() as Map<String, dynamic>;
+    final roomName = roomData['name'] as String;
+    final roomIcon = roomData['icon'];
 
-              return ListTile(
-                title: Text(roomName, style: Theme.of(context).textTheme.titleMedium),
-                leading: Icon(roomIcon is IconData ? roomIcon : IconData(
-                  int.parse(roomIcon.toString()),
-                  fontFamily: 'MaterialIcons',
-                )),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  setState(() {
-                    _selectedRoomId = room.id;
-                    _selectedRoomName = roomName;
-                  });
-                  Navigator.pop(context);
-                },
-              );
-            },
-          );
+    return ListTile(
+      title: Text(
+        roomName,
+        style: Theme.of(context).textTheme.titleMedium,
+      ),
+      leading: Icon(
+        IconData(
+          int.tryParse(roomIcon.toString()) ?? Icons.device_unknown.codePoint,
+          fontFamily: 'MaterialIcons',
+        ),
+      ),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () {
+        setState(() {
+          _selectedRoomId = room.id;
+          _selectedRoomName = roomName;
+        });
+        Navigator.pop(context);
+      },
+    );
+  },
+);
+
         },
       );
     },
